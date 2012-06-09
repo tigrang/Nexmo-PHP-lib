@@ -11,6 +11,9 @@
  *     numbersSearch($country_code, $pattern)
  *     numbersBuy($country_code, $msisdn)
  *     numbersCancel($country_code, $msisdn)
+ *     searchMessage($message_id)
+ *     searchMessages($ids)
+ *     searchMessagesByRecipient($to, $date)
  *
  */
 class NexmoAccount {
@@ -44,6 +47,8 @@ class NexmoAccount {
 		'search_numbers' => array('method' => 'GET', 'url' => '/number/search/{k}/{s}/{country_code}?pattern={pattern}'),
 		'buy_number' => array('method' => 'POST', 'url' => '/number/buy/{k}/{s}/{country_code}/{msisdn}'),
 		'cancel_number' => array('method' => 'POST', 'url' => '/number/cancel/{k}/{s}/{country_code}/{msisdn}'),
+		'search_message' => array('method' => 'GET', 'url' => '/search/message/{k}/{s}/{message_id}'),
+		'search_messages' => array('method' => 'GET', 'url' => '/search/messages/{k}/{s}'),
 	);
 
 	/**
@@ -174,12 +179,48 @@ class NexmoAccount {
 	}
 
 	/**
+	 * Search message by id
+	 * @param $message_id Message id to retrieve
+	 * @return boolean|array
+	 */
+	public function searchMessage($message_id) {
+		if (!isset($this->cache['message'][$message_id])) {
+			$tmp = $this->apiCall('search_message', array('message_id'=>$message_id));
+			$message = ($tmp['http_code'] === 200) ? $tmp['data'] : false;
+			$this->cache['message'][$message_id] = $message;
+		}
+		return $this->cache['message'][$message_id];
+	}
+
+	/**
+	 * Search message multiple ids
+	 * @param $ids Array of message ids
+	 * @return boolean|array
+	 */
+	public function searchMessages($ids) {
+		$tmp = $this->apiCall('search_messages', null, compact('ids'));
+		return ($tmp['http_code'] === 200) ? $tmp['data'] : false;
+	}
+
+	/**
+	 * Search message by recipient and date
+	 * @param $to Recipent's phone number
+	 * @param $date Date when sms was sent in YYYY-MM-DD format
+	 * @return boolean|array
+	 */
+	public function searchMessagesByRecipient($to, $date) {
+		$tmp = $this->apiCall('search_messages', null, compact('to', 'date'));
+		return ($tmp['http_code'] === 200) ? $tmp['data'] : false;
+	}
+
+	/**
 	 * Run a REST command on Nexmo SMS services
 	 * @param string $command REST command to call
 	 * @param array $data POST data to send
+	 * @param array $query GET paramaters
 	 * @return array|bool
 	 */
-	private function apiCall($command, $data=array()) {
+	private function apiCall($command, $data=array(), $query=array()) {
 		if (!isset($this->rest_commands[$command])) {
 			return false;
 		}
@@ -195,6 +236,19 @@ class NexmoAccount {
 		$url = str_replace(array_keys($parsed_data), array_values($parsed_data), $url);
 
 		$url = trim($this->rest_base_url, '/') . $url;
+		$queryString = '';
+		foreach($query as $k => $v) {
+			if (is_array($v)) {
+				foreach($v as $i) {
+					$queryString .= "$k=$i&";
+				}
+			} else {
+				$queryString .= "$k=$v&";
+			}
+		}
+		if ($queryString) {
+			$url .= '?' . substr($queryString, 0, -1);
+		}
 		$post_data = '';
 
 		// If available, use CURL
