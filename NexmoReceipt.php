@@ -1,15 +1,13 @@
 <?php
-
 /**
  * Class NexmoReceipt handles and incoming message receipts sent by Nexmo
  * 
- * Usage: $var = new NexoReceipt ();
+ * Usage: $var = new NexoReceipt();
  * Methods:
- *     exists ( )
+ *     exists()
  *     
  *
  */
-
 class NexmoReceipt {
 
 	const STATUS_DELIVERED = 'DELIVERED';
@@ -26,13 +24,13 @@ class NexmoReceipt {
 
 	public $found = false;
 
-	public function __construct ($data = false) {
-		if (!$data) $data = $_GET;
-
+	public function __construct($data = false) {
+		if (!$data) {
+			$data = $_GET;
+		}
 		if (!isset($data['msisdn'], $data['network-code'], $data['messageId'])) {
 			return;
 		}
-
 		// Flag that a receipt was found
 		$this->found = true;
 
@@ -55,4 +53,5 @@ class NexmoReceipt {
 	public function exists () {
 		return $this->found;
 	}
+
 }
